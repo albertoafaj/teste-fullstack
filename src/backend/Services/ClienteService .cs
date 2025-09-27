@@ -33,6 +33,8 @@ public class ClienteService(AppDbContext db) : IClienteService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(dto.Nome))
+                throw new NotFoundException("Não foi possível criar o usuário. O nome informado é vázio ou nulo");
             await VerificarUnicidadeClienteNomeTelefone(dto);
 
             var c = new Cliente
@@ -122,7 +124,9 @@ public class ClienteService(AppDbContext db) : IClienteService
 
     public async Task VerificarUnicidadeClienteNomeTelefone(ClienteDto dto)
     {
-        bool existe = await VerificarSeExiste(c => c.Nome == dto.Nome && c.Telefone == dto.Telefone);
-        if (existe) throw new ConflictException($"Não será possível cadastrar/atualizar o cliente. Já existe um cadastro para {dto.Nome} no telefone:({dto.Telefone})");
+        string? telefoneDto = string.IsNullOrWhiteSpace(dto.Telefone) ? "" : dto.Telefone.Trim();
+
+        bool existe = await VerificarSeExiste(c => c.Nome == dto.Nome.Trim() && c.Telefone == telefoneDto);
+        if (existe) throw new ConflictException($"Não será possível cadastrar/atualizar o cliente. Já existe um cadastro para {dto?.Nome} no telefone:({dto?.Telefone})");
     }
 }
