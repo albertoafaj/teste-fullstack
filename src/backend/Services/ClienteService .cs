@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Parking.Api.Data;
 using Parking.Api.Dtos;
+using Parking.Api.Exceptions;
 using Parking.Api.Models;
 using System.Linq.Expressions;
 
@@ -13,8 +14,7 @@ public class ClienteService(AppDbContext db) : IClienteService
         try
         {
             await VerificarUnicidadeClienteNomeTelefone(dto);
-            Cliente? cliente = await GetById(id);
-            if (cliente == null) return null;
+            Cliente cliente = await GetById(id);
             cliente.Nome = dto.Nome;
             cliente.Telefone = dto.Telefone;
             cliente.Endereco = dto.Endereco;
@@ -53,11 +53,13 @@ public class ClienteService(AppDbContext db) : IClienteService
         }
     }
 
-    public async Task<Cliente?> GetById(Guid id)
+    public async Task<Cliente> GetById(Guid id)
     {
         try
         {
             Cliente? c = await db.Clientes.Include(x => x.Veiculos).FirstOrDefaultAsync(x => x.Id == id);
+            if (c == null)
+                throw new NotFoundException($"Cliente de id {id} não encontrado");
             return c;
         }
         catch (Exception)
@@ -72,8 +74,7 @@ public class ClienteService(AppDbContext db) : IClienteService
         {
             var q = db.Clientes.AsQueryable();
             if (!string.IsNullOrWhiteSpace(filtro))
-                q = null;
-            //q = q.Where(c => c.Nome.Contains(filtro));
+                q = q.Where(c => c.Nome.Contains(filtro));
             if (mensalista == "true") q = q.Where(c => c.Mensalista);
             if (mensalista == "false") q = q.Where(c => !c.Mensalista);
             var total = await q.CountAsync();
@@ -95,9 +96,9 @@ public class ClienteService(AppDbContext db) : IClienteService
         try
         {
             Cliente? cliente = await db.Clientes.FindAsync(id);
-            if (cliente == null) throw new Exception("Não foi possível excluír o cliente. Cliente não encontrado");
+            if (cliente == null) throw new NotFoundException("Não foi possível excluír o cliente. Cliente não encontrado");
             var temVeiculos = await db.Veiculos.AnyAsync(v => v.ClienteId == id);
-            if (temVeiculos) throw new ArgumentException("Cliente possui veículos associados. Transfira ou remova antes.");
+            if (temVeiculos) throw new BadRequestException("Cliente possui veículos associados. Transfira ou remova antes.");
             db.Clientes.Remove(cliente);
             await db.SaveChangesAsync();
         }
@@ -122,6 +123,6 @@ public class ClienteService(AppDbContext db) : IClienteService
     public async Task VerificarUnicidadeClienteNomeTelefone(ClienteDto dto)
     {
         bool existe = await VerificarSeExiste(c => c.Nome == dto.Nome && c.Telefone == dto.Telefone);
-        if (existe) throw new InvalidOperationException($"Não será possível cadastrar/atualizar o cliente. Já existe um cadastro para {dto.Nome} no telefone:({dto.Telefone})");
+        if (existe) throw new ConflictException($"Não será possível cadastrar/atualizar o cliente. Já existe um cadastro para {dto.Nome} no telefone:({dto.Telefone})");
     }
 }

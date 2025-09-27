@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Parking.Api.Data;
+using Parking.Api.Middlewares;
 using Parking.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,5 +45,7 @@ app.UseSwaggerUI();
 app.UseCors("AllowFrontend");
 
 app.MapControllers();
+
+app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.Run();
