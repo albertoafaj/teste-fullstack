@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiGet, apiPost, apiDelete } from '../api'
+import { apiGet, apiPut, apiPost, apiDelete } from '../api'
 
 export default function ClientesPage(){
   const qc = useQueryClient()
   const [filtro, setFiltro] = useState('')
   const [mensalista, setMensalista] = useState('all')
   const [form, setForm] = useState({ nome:'', telefone:'', endereco:'', mensalista:false, valorMensalidade:'' })
+  const [editId, setEditId] = useState(null)
 
   const q = useQuery({
     queryKey:['clientes', filtro, mensalista],
@@ -22,6 +23,36 @@ export default function ClientesPage(){
     mutationFn: (id) => apiDelete(`/api/clientes/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey:['clientes'] })
   })
+
+
+  const update = useMutation({
+    mutationFn: (data) => apiPut(`/api/clientes/${editId}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clientes'] })
+      resetForm()
+    }
+  })
+
+  function resetForm() {
+    setForm({ nome: '', telefone: '', endereco: '', mensalista: false, valorMensalidade: '' })
+    setEditId(null)
+  }
+
+  function handleSubmit() {
+    const payload = {
+      nome: form.nome,
+      telefone: form.telefone,
+      endereco: form.endereco,
+      mensalista: form.mensalista,
+      valorMensalidade: form.valorMensalidade ? Number(form.valorMensalidade) : null
+    }
+
+    if (editId) {
+      update.mutate(payload)
+    } else {
+      create.mutate(payload)
+    }
+  }
 
   return (
     <div>
@@ -39,22 +70,36 @@ export default function ClientesPage(){
         </div>
       </div>
 
-      <h3>Novo cliente</h3>
+       <h3>{editId ? 'Editar cliente' : 'Novo cliente'}</h3>
       <div className="section">
         <div className="grid grid-4">
+        <div>
+          {editId ? <label htmlFor="Nome">Nome</label> : null}
           <input placeholder="Nome" value={form.nome} onChange={e=>setForm({...form, nome:e.target.value})}/>
+        </div>
+        <div>
+          {editId ? <label htmlFor="Telefone">Telefone</label> : null}
           <input placeholder="Telefone" value={form.telefone} onChange={e=>setForm({...form, telefone:e.target.value})}/>
+        </div>
+        <div>
+          {editId ? <label htmlFor="Endereço">Endereço</label> : null}
           <input placeholder="Endereço" value={form.endereco} onChange={e=>setForm({...form, endereco:e.target.value})}/>
+        </div>
+
           <label style={{display:'flex', alignItems:'center', gap:8}}>
             <input type="checkbox" checked={form.mensalista} onChange={e=>setForm({...form, mensalista:e.target.checked})}/> Mensalista
           </label>
+        <div>
+          {editId ? <label htmlFor="Valor mensalidade">Valor mensalidade</label> : null}
           <input placeholder="Valor mensalidade" value={form.valorMensalidade} onChange={e=>setForm({...form, valorMensalidade:e.target.value})}/>
+        </div>
+          
           <div/>
           <div/>
-          <button onClick={()=>create.mutate({
-            nome:form.nome, telefone:form.telefone, endereco:form.endereco,
-            mensalista:form.mensalista, valorMensalidade:form.valorMensalidade? Number(form.valorMensalidade): null
-          })}>Salvar</button>
+          <div>
+            <button onClick={handleSubmit}>{editId ? 'Atualizar' : 'Salvar'}</button>
+            {editId && <button onClick={resetForm} className="btn-ghost">Cancelar</button>}
+          </div>
         </div>
       </div>
 
@@ -72,7 +117,19 @@ export default function ClientesPage(){
                   <td>
                     <button className="btn-ghost" onClick={()=>remover.mutate(c.id)}>Excluir</button>
                   </td>
-                </tr>
+                  <td>
+                    <button className="btn-ghost" onClick={() => {
+                      setForm({
+                        nome: c.nome,
+                        telefone: c.telefone,
+                        endereco: c.endereco,
+                        mensalista: c.mensalista,
+                        valorMensalidade: c.valorMensalidade || ''
+                      })
+                      setEditId(c.id)
+                    }}>Editar</button>
+                  </td>
+                </tr>         
               ))}
             </tbody>
           </table>
