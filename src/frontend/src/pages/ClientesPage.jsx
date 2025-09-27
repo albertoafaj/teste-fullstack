@@ -65,10 +65,20 @@ export default function ClientesPage() {
             valorMensalidade: form.valorMensalidade ? Number(form.valorMensalidade) : null
         }
 
-        if (editId) {
-            update.mutate(payload)
-        } else {
-            create.mutate(payload)
+        const acao = editId ? 'atualizar' : 'adicionar'
+
+        if (window.confirm(`Tem certeza que deseja ${acao} este cliente?`)) {
+            if (editId) {
+                update.mutate(payload)
+            } else {
+                create.mutate(payload)
+            }
+        }
+    }
+
+    function handleDelete(id, nome) {
+        if (window.confirm(`Tem certeza que deseja excluir o cliente ${nome}?`)) {
+            remover.mutate(id)
         }
     }
 
@@ -139,7 +149,7 @@ export default function ClientesPage() {
                                     <td>{c.telefone}</td>
                                     <td>{c.mensalista ? 'Sim' : 'Não'}</td>
                                     <td>
-                                        <button className="btn-ghost" onClick={() => remover.mutate(c.id)}>Excluir</button>
+                                        <button className="btn-ghost" onClick={() => handleDelete(c.id, c.nome)}>Excluir</button>
                                     </td>
                                     <td>
                                         <button className="btn-ghost" onClick={() => {
