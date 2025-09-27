@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Parking.Api.Data;
 using Parking.Api.Dtos;
 using Parking.Api.Models;
+using Parking.Api.Services;
 
 namespace Parking.Api.Controllers
 {
@@ -11,77 +12,102 @@ namespace Parking.Api.Controllers
     [Route("api/[controller]")]
     public class ClientesController : ControllerBase
     {
+        IClienteService _clienteService;
         private readonly AppDbContext _db;
-        public ClientesController(AppDbContext db) => _db = db;
+
+        public ClientesController(AppDbContext db, IClienteService clienteService)
+        {
+            _db = db;
+            _clienteService = clienteService;
+        }
 
         [HttpGet]
         public async Task<IActionResult> List([FromQuery] int pagina = 1, [FromQuery] int tamanho = 10, [FromQuery] string? filtro = null, [FromQuery] string mensalista = "all")
         {
-            var q = _db.Clientes.AsQueryable();
-            if (!string.IsNullOrWhiteSpace(filtro))
-                q = q.Where(c => c.Nome.Contains(filtro));
-            if (mensalista == "true") q = q.Where(c => c.Mensalista);
-            if (mensalista == "false") q = q.Where(c => !c.Mensalista);
-
-            var total = await q.CountAsync();
-            var itens = await q
-                .OrderBy(c => c.Nome)
-                .Skip((pagina - 1) * tamanho)
-                .Take(tamanho)
-                .ToListAsync();
-            return Ok(new { total, itens });
+            (int total, List<Cliente> itens) result;
+            try
+            {
+                result = await _clienteService.Listar(pagina, tamanho, filtro, mensalista);
+                return Ok(new { result.total, result.itens });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.InnerException == null ? "Erro desconhecido. Contate o administrador." : ex.Message });
+            }
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ClienteCreateDto dto)
+        public async Task<IActionResult> Create([FromBody] ClienteDto dto)
         {
-            var existe = await _db.Clientes.AnyAsync(c => c.Nome == dto.Nome && c.Telefone == dto.Telefone);
-            if (existe) return Conflict("Cliente já existe.");
-
-            var c = new Cliente
+            try
             {
-                Nome = dto.Nome,
-                Telefone = dto.Telefone,
-                Endereco = dto.Endereco,
-                Mensalista = dto.Mensalista,
-                ValorMensalidade = dto.ValorMensalidade,
-            };
-            _db.Clientes.Add(c);
-            await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = c.Id }, c);
+                Cliente cliente = await _clienteService.Criar(dto);
+                return CreatedAtAction(nameof(GetById), new { id = cliente.Id }, cliente);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.InnerException == null ? "Erro desconhecido. Contate o administrador." : ex.Message });
+            }
         }
 
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var c = await _db.Clientes.Include(x => x.Veiculos).FirstOrDefaultAsync(x => x.Id == id);
-            return c == null ? NotFound() : Ok(c);
+            Cliente? cliente = await _clienteService.GetById(id);
+            return cliente == null ? NotFound() : Ok(cliente);
         }
 
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ClienteUpdateDto dto)
+        public async Task<IActionResult> Update(Guid id, [FromBody] ClienteDto dto)
         {
-            var c = await _db.Clientes.FindAsync(id);
-            if (c == null) return NotFound();
-            c.Nome = dto.Nome;
-            c.Telefone = dto.Telefone;
-            c.Endereco = dto.Endereco;
-            c.Mensalista = dto.Mensalista;
-            c.ValorMensalidade = dto.ValorMensalidade;
-            await _db.SaveChangesAsync();
-            return Ok(c);
+            try
+            {
+                Cliente? cliente = await _clienteService.Atualizar(id, dto);
+                if (cliente == null) return NotFound();
+                return Ok(cliente);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.InnerException == null ? "Erro desconhecido. Contate o administrador." : ex.Message });
+            }
         }
 
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var c = await _db.Clientes.FindAsync(id);
-            if (c == null) return NotFound();
-            var temVeiculos = await _db.Veiculos.AnyAsync(v => v.ClienteId == id);
-            if (temVeiculos) return BadRequest("Cliente possui veículos associados. Transfira ou remova antes.");
-            _db.Clientes.Remove(c);
-            await _db.SaveChangesAsync();
-            return NoContent();
+            try
+            {
+                await _clienteService.Remover(id);
+                return NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.InnerException == null ? "Erro desconhecido. Contate o administrador." : ex.Message });
+            }
         }
     }
 }

@@ -17,6 +17,7 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 
 builder.Services.AddScoped<PlacaService>();
 builder.Services.AddScoped<FaturamentoService>();
+builder.Services.AddScoped<IClienteService, ClienteService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
