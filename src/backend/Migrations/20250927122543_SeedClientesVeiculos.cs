@@ -46,7 +46,7 @@ public partial class SeedClientesVeiculos : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DeleteData(
-            table: "veiculo",
+            table: "veiculo",            
             keyColumn: "id",
             keyValues: new object[]
             {

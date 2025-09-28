@@ -43,7 +43,7 @@ namespace Parking.Api.Middlewares
                     break;
                 default:
                     status = HttpStatusCode.InternalServerError;
-                    message = "Erro desconhecido. Contate o administrador.";
+                    message = "Erro desconhecido. Contate o administrador."+ message;
                     break;
             }
 

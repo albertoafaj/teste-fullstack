@@ -32,7 +32,6 @@ export default function ClientesPage() {
         onSuccess: () => qc.invalidateQueries({ queryKey: ['clientes'] })
     })
 
-
     const update = useMutation({
         mutationFn: (data) => apiPut(`/api/clientes/${editId}`, data),
         onSuccess: () => {

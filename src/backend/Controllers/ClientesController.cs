@@ -12,11 +12,9 @@ namespace Parking.Api.Controllers
     public class ClientesController : ControllerBase
     {
         IClienteService _clienteService;
-        private readonly AppDbContext _db;
 
-        public ClientesController(AppDbContext db, IClienteService clienteService)
+        public ClientesController(IClienteService clienteService)
         {
-            _db = db;
             _clienteService = clienteService;
         }
 
