@@ -18,7 +18,7 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 });
 
 builder.Services.AddScoped<PlacaService>();
-builder.Services.AddScoped<FaturamentoService>();
+builder.Services.AddScoped<IFaturamentoService, FaturamentoService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IVeiculosService, VeiculosService>();
 builder.Services.AddScoped<IUploadCsvService, UploadCsvService>();

@@ -1,21 +1,23 @@
 
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Parking.Api.Data;
+using Parking.Api.Dtos;
+using Parking.Api.Exceptions;
 using Parking.Api.Models;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using Parking.Api.Services.Interfaces;
+using System.Globalization;
+using System.Linq.Expressions;
 
 namespace Parking.Api.Services
 {
-    public class FaturamentoService
+    public class FaturamentoService(AppDbContext db) : IFaturamentoService
     {
         private string _observacaoFatura = string.Empty;
-        private readonly AppDbContext _db;
-        public FaturamentoService(AppDbContext db) => _db = db;
 
-        // BUG proposital: usa dono ATUAL do veículo em vez do dono NA DATA DE CORTE
         public async Task<List<Fatura>> GerarAsync(string competencia, CancellationToken ct = default)
         {
-            // competencia formato yyyy-MM
+            if (!ECompetenciaValida(competencia)) throw new BadRequestException($"A competência deve ser digitada no formato yyyy-MM (ex.: 2025-09)");
 
             var part = competencia.Split('-');
             var ano = int.Parse(part[0]);
@@ -24,7 +26,7 @@ namespace Parking.Api.Services
             var corte = new DateTime(ano, mes, ultimoDia, 23, 59, 59, DateTimeKind.Utc);
             var primeiroDia = new DateTime(ano, mes, 01, 00, 00, 00, DateTimeKind.Utc);
 
-            var mensalistas = await _db.Clientes
+            var mensalistas = await db.Clientes
                 .Where(c => c.Mensalista)
                 .AsNoTracking()
                 .ToListAsync(ct);
@@ -33,11 +35,11 @@ namespace Parking.Api.Services
 
             foreach (var cli in mensalistas)
             {
-                var existente = await _db.Faturas
+                var existente = await db.Faturas
                     .FirstOrDefaultAsync(f => f.ClienteId == cli.Id && f.Competencia == competencia, ct);
                 if (existente != null) continue; // idempotência simples
 
-                List<Veiculo> veiculosDoCLienteNaCompetencia = await _db.Veiculos
+                List<Veiculo> veiculosDoCLienteNaCompetencia = await db.Veiculos
                     .Where(v => v.ClienteId == cli.Id && (v.DataInclusao < corte && v.DataVigencia == null) || (v.DataVigencia != null && v.DataVigencia > primeiroDia))
                     .ToListAsync(ct);
 
@@ -52,16 +54,16 @@ namespace Parking.Api.Services
                 foreach (var id in veiculosDoCLienteNaCompetencia.Select(v => v.Id).ToList())
                     fat.Veiculos.Add(new FaturaVeiculo { FaturaId = fat.Id, VeiculoId = id });
 
-                _db.Faturas.Add(fat);
+                db.Faturas.Add(fat);
                 criadas.Add(fat);
                 _observacaoFatura = string.Empty;
             }
 
-            await _db.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(ct);
             return criadas;
         }
 
-        public decimal CalculaValorFatura(DateTime dataInicial, DateTime dataCorte, List<Veiculo> veiculosDoCLiente, decimal? valorMensalidade)
+        private decimal CalculaValorFatura(DateTime dataInicial, DateTime dataCorte, List<Veiculo> veiculosDoCLiente, decimal? valorMensalidade)
         {
             decimal valorFatura = 0m;
             int numeroDiasMes = DateTime.DaysInMonth(dataCorte.Year, dataCorte.Month);
@@ -84,9 +86,70 @@ namespace Parking.Api.Services
             return valorFatura;
         }
 
-        private void GerarObservasaoFatura(string placa, decimal valor, int diarias )
+        private void GerarObservasaoFatura(string placa, decimal valor, int diarias)
         {
-            _observacaoFatura += $" Veículo placa: {placa} Valor cobrado: R$ {Math.Round(valor,2)} número de diárias {diarias} diárias;\n"; 
+            _observacaoFatura += $" Veículo placa: {placa} Valor cobrado: R$ {Math.Round(valor, 2)} número de diárias {diarias} diárias;\n";
+        }
+
+        public async Task<List<FaturaDto>> Listar([FromQuery] string? competencia = null)
+        {
+            try
+            {
+                IQueryable<Fatura> q = db.Faturas.AsQueryable();
+                if (!string.IsNullOrWhiteSpace(competencia)) q = q.Where(f => f.Competencia == competencia);
+                List<Fatura> faturas = await q.OrderByDescending(v => v.CriadaEm).ToListAsync();
+                List<FaturaDto> faturasDto = [];
+
+                foreach (var f in faturas)
+                {
+                    int qtdVeiculos = await ObterFaturasVeiculos(x => x.FaturaId == f.Id);
+
+                    faturasDto.Add(new FaturaDto(f.Id,f.Competencia,f.ClienteId,f.Valor,f.CriadaEm,qtdVeiculos));
+                }
+                return faturasDto;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<int> ObterFaturasVeiculos(Expression<Func<FaturaVeiculo, bool>> predicate)
+        {
+            try
+            {
+                return await db.FaturasVeiculos.Where(predicate).CountAsync();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<List<string>> ListarPlacasPorFaturaId(Guid id)
+        {
+            try
+            {
+                return await db.FaturasVeiculos
+                    .Where(x => x.FaturaId == id)
+                    .Join(db.Veiculos, fv => fv.VeiculoId, v => v.Id, (fv, v) => v.Placa)
+                    .ToListAsync();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public bool ECompetenciaValida(string competencia)
+        {
+            return DateTime.TryParseExact(
+                competencia,
+                "yyyy-MM",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out _
+            );
         }
     }
 }
