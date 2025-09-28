@@ -2,7 +2,7 @@
 using Parking.Api.Models;
 using System.Linq.Expressions;
 
-namespace Parking.Api.Services;
+namespace Parking.Api.Services.Interfaces;
 
 public interface IClienteService
 {
@@ -11,5 +11,6 @@ public interface IClienteService
     Task<Cliente> Criar(ClienteDto dto);
     Task<Cliente?> Atualizar(Guid id, ClienteDto dto);
     Task Remover(Guid id);
-    Task<bool> VerificarSeExiste(Expression<Func<Cliente, bool>> predicate);
+    Task<IEnumerable<Cliente>> Filtrar(Expression<Func<Cliente, bool>> predicate);
+    Task<Cliente?> ObterClientePorNomeTelefone(ClienteDto dto);
 }

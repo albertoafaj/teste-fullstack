@@ -2,7 +2,7 @@
 using Parking.Api.Models;
 using System.Linq.Expressions;
 
-namespace Parking.Api.Services;
+namespace Parking.Api.Services.Interfaces;
 
 public interface IVeiculosService
 {

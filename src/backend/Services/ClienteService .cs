@@ -3,6 +3,7 @@ using Parking.Api.Data;
 using Parking.Api.Dtos;
 using Parking.Api.Exceptions;
 using Parking.Api.Models;
+using Parking.Api.Services.Interfaces;
 using System.Linq.Expressions;
 
 namespace Parking.Api.Services;
@@ -13,7 +14,7 @@ public class ClienteService(AppDbContext db) : IClienteService
     {
         try
         {
-            await VerificarUnicidadeClienteNomeTelefone(dto);
+            await ValidarCliente(dto);
             Cliente cliente = await GetById(id);
             cliente.Nome = dto.Nome;
             cliente.Telefone = dto.Telefone;
@@ -35,7 +36,7 @@ public class ClienteService(AppDbContext db) : IClienteService
         {
             if (string.IsNullOrWhiteSpace(dto.Nome))
                 throw new NotFoundException("Não foi possível criar o usuário. O nome informado é vázio ou nulo");
-            await VerificarUnicidadeClienteNomeTelefone(dto);
+            await ValidarCliente(dto);
 
             var c = new Cliente
             {
@@ -110,11 +111,11 @@ public class ClienteService(AppDbContext db) : IClienteService
         }
     }
 
-    public async Task<bool> VerificarSeExiste(Expression<Func<Cliente, bool>> predicate)
+    public async Task<IEnumerable<Cliente>> Filtrar(Expression<Func<Cliente, bool>> predicate)
     {
         try
         {
-            return await db.Clientes.AnyAsync(predicate);
+            return await db.Clientes.Where(predicate).Include(x => x.Veiculos).ToListAsync();
         }
         catch (Exception)
         {
@@ -122,11 +123,18 @@ public class ClienteService(AppDbContext db) : IClienteService
         }
     }
 
-    public async Task VerificarUnicidadeClienteNomeTelefone(ClienteDto dto)
+    public async Task ValidarCliente(ClienteDto dto)
+    {
+        Cliente? cliente = await ObterClientePorNomeTelefone(dto);
+        if (cliente != null) throw new ConflictException($"Não será possível cadastrar/atualizar o cliente. Já existe um cadastro para {dto?.Nome} no telefone:({dto?.Telefone})");
+    }
+
+    public async Task<Cliente?> ObterClientePorNomeTelefone(ClienteDto dto)
     {
         string? telefoneDto = string.IsNullOrWhiteSpace(dto.Telefone) ? "" : dto.Telefone.Trim();
 
-        bool existe = await VerificarSeExiste(c => c.Nome == dto.Nome.Trim() && c.Telefone == telefoneDto);
-        if (existe) throw new ConflictException($"Não será possível cadastrar/atualizar o cliente. Já existe um cadastro para {dto?.Nome} no telefone:({dto?.Telefone})");
+        IEnumerable<Cliente> clientes = await Filtrar(c => c.Nome == dto.Nome.Trim() && c.Telefone == telefoneDto);
+
+        return clientes.FirstOrDefault();
     }
 }

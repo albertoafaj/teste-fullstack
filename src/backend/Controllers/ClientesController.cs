@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Parking.Api.Data;
 using Parking.Api.Dtos;
 using Parking.Api.Models;
-using Parking.Api.Services;
+using Parking.Api.Services.Interfaces;
 
 namespace Parking.Api.Controllers
 {

@@ -14,7 +14,52 @@ export default function CsvUploadPage(){
     })
     const j = await r.json()
     setLog(j)
-  }
+    }
+
+    function renderRelatorio(log) {
+        if (!log) return <p>Aguardando upload...</p>
+
+        return (
+            <div>
+                <p>
+                    <strong>Processados:</strong> {log.processados} |{' '}
+                    <strong>Inseridos:</strong> {log.inseridos} |{' '}
+                    <strong>Falhas:</strong> {log.erros?.length || 0}
+                </p>
+
+                {log.erros?.length > 0 && (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
+                        <thead>
+                            <tr>
+                                <th style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>Linha</th>
+                                <th style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>Motivo do Erro</th>
+                                <th style={{ borderBottom: '1px solid #ccc', textAlign: 'left' }}>Dados</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {log.erros.map((err, idx) => {                                
+                                const match = err.match(/^Linha\s+(\d+):\s+(.+?)\s+\(raw='(.+)'\)$/)
+                                const linha = match ? match[1] : 'N/A'
+                                const motivo = match ? match[2] : err
+                                const raw = match ? match[3] : ''
+                                return (
+                                    <tr key={idx}>
+                                        <td style={{ borderBottom: '1px solid #eee' }}>{linha}</td>
+                                        <td style={{ borderBottom: '1px solid #eee', color: 'red' }}>{motivo}</td>
+                                        <td style={{ borderBottom: '1px solid #eee', fontFamily: 'monospace', fontSize: 12 }}>
+                                            {raw}
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                )}
+
+                {log.erros?.length === 0 && <p style={{ color: 'green' }}>Nenhum erro encontrado!</p>}
+            </div>
+        )
+    }
 
   return (
     <div>
@@ -27,11 +72,8 @@ export default function CsvUploadPage(){
       </div>
 
       <h3 style={{marginTop:16}}>Relatório</h3>
-      <div className="section">
-        <pre style={{background:'#0b0c0e', color:'#c7d2fe', padding:12, margin:0, borderRadius:10}}>
-{log? JSON.stringify(log, null, 2) : 'Aguardando upload...'}
-        </pre>
-        <p className="note">Tarefa: melhorar o relatório de erros (linhas e motivos mais claros; opcional transação por lote).</p>
+          <div className="section">
+              {renderRelatorio(log)}
       </div>
     </div>
   )

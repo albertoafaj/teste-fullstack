@@ -4,6 +4,7 @@ using Microsoft.OpenApi.Models;
 using Parking.Api.Data;
 using Parking.Api.Middlewares;
 using Parking.Api.Services;
+using Parking.Api.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,7 @@ builder.Services.AddScoped<PlacaService>();
 builder.Services.AddScoped<FaturamentoService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IVeiculosService, VeiculosService>();
+builder.Services.AddScoped<IUploadCsvService, UploadCsvService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(opt =>
