@@ -5,6 +5,7 @@ using Parking.Api.Dtos;
 using Parking.Api.Models;
 using System.Linq.Expressions;
 using Parking.Api.Services.Interfaces;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Parking.Api.Services;
 
@@ -33,7 +34,7 @@ public class VeiculosService(AppDbContext db, PlacaService placaService, IClient
         {
             var placa = placaService.Sanitizar(dto.Placa);
             if (!placaService.EhValida(placa)) throw new BadRequestException($"Placa {placa} inválida.");
-            if (await VerificarSeExiste(v => v.Placa == placa)) throw new ConflictException($"Placa {placa} já existe.");
+            if (await VerificarSeExiste(v => v.Placa == placa && v.DataVigencia == null)) throw new ConflictException($"Placa {placa} já está associada a outro cliente. Para trocar de cliente vá até a tela de veiculos e realize a traoca.");
             var v = new Veiculo { Placa = placa, Modelo = dto.Modelo, Ano = dto.Ano, ClienteId = dto.ClienteId };
             db.Veiculos.Add(v);
             await db.SaveChangesAsync();
@@ -102,19 +103,24 @@ public class VeiculosService(AppDbContext db, PlacaService placaService, IClient
 
     private async Task<Veiculo> AtualizarCliente(Veiculo veiculo, VeiculoDto dto)
     {
+        IDbContextTransaction transaction = await db.Database.BeginTransactionAsync();
         try
         {
             await clienteService.GetById(dto.ClienteId);
-            veiculo.ClienteId = dto.ClienteId;
+            veiculo.DataVigencia = DateTime.UtcNow;
             await db.SaveChangesAsync();
-            return veiculo;
+            Veiculo veiculoAtualizado = await Criar(dto);
+            await transaction.CommitAsync();
+            await transaction.DisposeAsync();
+            return veiculoAtualizado;
         }
         catch (Exception)
         {
+            await transaction.RollbackAsync();
             throw;
         }
-        
-    }    
+
+    }
     private async Task<Veiculo> AtualizarDadosDoVeiculo(Veiculo veiculo, VeiculoDto dto)
     {
         var placa = placaService.Sanitizar(dto.Placa);

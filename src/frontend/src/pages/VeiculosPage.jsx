@@ -10,6 +10,7 @@ export default function VeiculosPage() {
     const [form, setForm] = useState({ placa: '', modelo: '', ano: '', clienteId: '' })
     const [editId, setEditId] = useState(null)
     const [errorMessage, setErrorMessage] = useState('')
+    const [status, setStatus] = useState('Todos')
 
     const create = useMutation({
         mutationFn: (data) => apiPost('/api/veiculos', data),
@@ -58,6 +59,16 @@ export default function VeiculosPage() {
                     <select value={clienteId} onChange={e => { setClienteId(e.target.value); setForm(f => ({ ...f, clienteId: e.target.value })) }}>
                         {clientes.data?.itens?.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                     </select>
+                    <label>Status: </label>
+                    <select
+                        value={status}
+                        onChange={e => {
+                            setStatus(e.target.value);
+                        }}>
+                        <option key="Todos" value="Todos">Todos</option>
+                        <option key="Ativo" value="Ativo">Vigentes</option>
+                        <option key="Inativo" value="Inativo">Inativos</option>
+                    </select>
                 </div>
             </div>
 
@@ -79,25 +90,44 @@ export default function VeiculosPage() {
                     <table>
                         <thead><tr><th>Placa</th><th>Modelo</th><th>Ano</th><th>ClienteId</th><th>Ações</th></tr></thead>
                         <tbody>
-                            {veiculos.data?.map(v => (
-                                <tr key={v.id}>
-                                    <td>{v.placa}</td>
-                                    <td>{v.modelo}</td>
-                                    <td>{v.ano ?? '-'}</td>
-                                    <td>{v.clienteId}</td>
-                                    <td style={{ display: 'flex', gap: 8 }}>
-                                        <button className="btn-ghost" onClick={() => {
-                                            const novoModelo = prompt('Novo modelo', v.modelo || '')
-                                            const novoAno = prompt('Novo modelo', v.ano || '')
-                                            const novoCliente = prompt('Novo modelo', v.clienteId || '')
-                                            if (novoModelo == null && novoAno == null && novoCliente == null) return
-                                            setEditId(v.id)
-                                            update.mutate({ placa: v.placa, modelo: novoModelo, ano: novoAno, clienteId: novoCliente })
-                                        }}>Editar</button>
-                                        <button className="btn-ghost" onClick={() => remover.mutate(v.id)}>Excluir</button>
-                                    </td>
-                                </tr>
-                            ))}
+                            {
+
+                                veiculos.data
+                                    ?.filter(v => {
+                                        if (status === 'Todos') return true
+                                        if (status === 'Ativo') return v.dataVigencia == null
+                                        if (status === 'Inativo') return v.dataVigencia != null
+                                        return true
+                                    })
+                                    .map(v => (
+                                        <tr key={v.id}>
+                                            <td>{v.placa}</td>
+                                            <td>{v.modelo}</td>
+                                            <td>{v.ano ?? '-'}</td>
+                                            <td>{v.clienteId}</td>
+                                            <td style={{ display: 'flex', gap: 8 }}>
+                                                <button className="btn-ghost" onClick={() => {
+                                                    const novoModelo = prompt('Novo modelo', v.modelo || '')
+                                                    const novoAno = prompt('Novo ano', v.ano || '')
+                                                    if (novoModelo == null && novoAno == null) return
+                                                    setEditId(v.id)
+                                                    update.mutate({ placa: v.placa, modelo: novoModelo, ano: novoAno, clienteId: v.clienteId })
+                                                }}>Editar Dados</button>
+
+                                                <button className="btn-ghost" onClick={() => remover.mutate(v.id)}>Excluir</button>
+
+                                                {v.dataVigencia == null ?
+                                                    <button className="btn-ghost" onClick={() => {
+                                                        const novoCliente = prompt('Novo Cliente', v.clienteId || '')
+                                                        if (novoCliente == null) return
+                                                        setEditId(v.id)
+                                                        update.mutate({ placa: v.placa, modelo: v.modelo, ano: v.ano, clienteId: novoCliente })
+                                                    }}>Trocar Cliente</button> :
+                                                    < div style={{ padding: '9px 14px' }}>Veículo inativo</div>
+                                                }
+                                            </td>
+                                        </tr>
+                                    ))}
                         </tbody>
                     </table>
                 )}

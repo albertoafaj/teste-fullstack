@@ -11,7 +11,7 @@ namespace Parking.Api.Models
         [MaxLength(120)] public string? Modelo { get; set; }
         public int? Ano { get; set; }
         public DateTime DataInclusao { get; set; } = DateTime.UtcNow;
-
+        public DateTime? DataVigencia { get; set; }
         [Required] public Guid ClienteId { get; set; }
         public Cliente? Cliente { get; set; }
     }

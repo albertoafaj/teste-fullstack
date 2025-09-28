@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Parking.Api.Data;
@@ -11,9 +12,11 @@ using Parking.Api.Data;
 namespace Parking.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250928173643_AddVeiculoVigencia")]
+    partial class AddVeiculoVigencia
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -157,7 +160,7 @@ namespace Parking.Api.Migrations
 
                     b.HasIndex("ClienteId");
 
-                    b.HasIndex("Placa", "DataVigencia")
+                    b.HasIndex("Placa")
                         .IsUnique();
 
                     b.ToTable("veiculo", "public");

@@ -41,8 +41,9 @@ namespace Parking.Api.Data
                 e.Property(x => x.Modelo).HasColumnName("modelo").HasMaxLength(120);
                 e.Property(x => x.Ano).HasColumnName("ano");
                 e.Property(x => x.DataInclusao).HasColumnName("data_inclusao");
+                e.Property(x => x.DataVigencia).HasColumnName("data_vigencia");
                 e.Property(x => x.ClienteId).HasColumnName("cliente_id");
-                e.HasIndex(x => x.Placa).IsUnique();
+                e.HasIndex(x => new { x.Placa, x.DataVigencia }).IsUnique();
             });
 
             modelBuilder.Entity<Fatura>(e =>
