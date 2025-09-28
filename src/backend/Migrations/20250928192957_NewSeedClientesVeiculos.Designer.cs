@@ -12,8 +12,8 @@ using Parking.Api.Data;
 namespace Parking.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250927122543_SeedClientesVeiculos")]
-    partial class SeedClientesVeiculos
+    [Migration("20250928192957_NewSeed")]
+    partial class NewSeed
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -63,7 +63,10 @@ namespace Parking.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Nome", "Telefone");
+                    b.HasIndex("Nome", "Telefone")
+                        .IsUnique()
+                        .HasDatabaseName("IX_cliente_nome_telefone_not_null")
+                        .HasFilter("\"telefone\" IS NOT NULL");
 
                     b.ToTable("cliente", "public");
                 });
@@ -138,6 +141,10 @@ namespace Parking.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("data_inclusao");
 
+                    b.Property<DateTime?>("DataVigencia")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("data_vigencia");
+
                     b.Property<string>("Modelo")
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)")
@@ -153,7 +160,7 @@ namespace Parking.Api.Migrations
 
                     b.HasIndex("ClienteId");
 
-                    b.HasIndex("Placa")
+                    b.HasIndex("Placa", "DataVigencia")
                         .IsUnique();
 
                     b.ToTable("veiculo", "public");

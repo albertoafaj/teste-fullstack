@@ -48,7 +48,11 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Parking API");
+    c.RoutePrefix = string.Empty;
+});
 
 app.UseCors("AllowFrontend");
 
