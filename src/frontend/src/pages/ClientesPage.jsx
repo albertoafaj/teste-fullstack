@@ -9,6 +9,7 @@ export default function ClientesPage() {
     const [form, setForm] = useState({ nome: '', telefone: '', endereco: '', mensalista: false, valorMensalidade: '' })
     const [editId, setEditId] = useState(null)
     const [errorMessage, setErrorMessage] = useState('')
+    const [errorMessageDelete, setErrorMessageDelete] = useState('')
 
     const q = useQuery({
         queryKey: ['clientes', filtro, mensalista],
@@ -29,7 +30,14 @@ export default function ClientesPage() {
 
     const remover = useMutation({
         mutationFn: (id) => apiDelete(`/api/clientes/${id}`),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['clientes'] })
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['clientes'] })
+            setErrorMessageDelete('')
+            resetForm()
+        },
+        onError: (error) => {
+            setErrorMessageDelete(error.message)
+        }
     })
 
     const update = useMutation({
@@ -50,8 +58,9 @@ export default function ClientesPage() {
     }
 
     useEffect(() => {
-        if (errorMessage) {
+        if (errorMessage || errorMessageDelete) {
             setErrorMessage('')
+            setErrorMessageDelete('')
         }
     }, [form, filtro, mensalista])
 
@@ -150,6 +159,7 @@ export default function ClientesPage() {
                                     <td>
                                         <button className="btn-ghost" onClick={() => handleDelete(c.id, c.nome)}>Excluir</button>
                                     </td>
+
                                     <td>
                                         <button className="btn-ghost" onClick={() => {
                                             setForm({
@@ -167,6 +177,12 @@ export default function ClientesPage() {
                             ))}
                         </tbody>
                     </table>
+
+                )}
+                {errorMessageDelete && (
+                    <div style={{ color: 'red', marginBottom: 8 }}>
+                        {errorMessageDelete}
+                    </div>
                 )}
             </div>
         </div>
