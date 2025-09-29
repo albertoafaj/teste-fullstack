@@ -5,6 +5,7 @@ using Parking.Api.Data;
 using Parking.Api.Middlewares;
 using Parking.Api.Services;
 using Parking.Api.Services.Interfaces;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,11 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath= Path.Combine(AppContext.BaseDirectory, xmlFile);
+
+    c.IncludeXmlComments(xmlPath);
+
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Parking API", Version = "v1" });
 });
 
