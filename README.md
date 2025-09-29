@@ -27,7 +27,7 @@ O sistema permite o gerenciamento de **clientes, veículos, mensalistas e fatura
 ### 4. Upload CSV
 - Melhoria no feedback de erros:
   - Exibição da **linha exata** e do **motivo do erro**.
-  - Exemplo: `Linha 12 - Telefone inválido`.
+  - Exemplo: `Linha 12 - Placa inválida`.
 - O relatório de importação foi ajustado para ser mais informativo e orientar o usuário na correção.
 
 ### 5. Frontend (React)
