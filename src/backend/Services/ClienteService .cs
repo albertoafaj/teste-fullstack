@@ -123,6 +123,11 @@ public class ClienteService(AppDbContext db) : IClienteService
         }
     }
 
+    /// <summary>
+    /// Valida se já existe cliente com o mesmo nome e telefone.
+    /// </summary>
+    /// <param name="dto">Dados do cliente para validação.</param>
+    /// <exception cref="ConflictException">Se já existir cliente duplicado.</exception>
     public async Task ValidarCliente(ClienteDto dto)
     {
         Cliente? cliente = await ObterClientePorNomeTelefone(dto);

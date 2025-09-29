@@ -63,6 +63,14 @@ namespace Parking.Api.Services
             return criadas;
         }
 
+        /// <summary>
+        /// Calcula o valor da fatura de um cliente com base nos veículos e dias ativos no mês.
+        /// </summary>
+        /// <param name="dataInicial">Data inicial do período.</param>
+        /// <param name="dataCorte">Data final do período.</param>
+        /// <param name="veiculosDoCLiente">Veículos do cliente.</param>
+        /// <param name="valorMensalidade">Valor da mensalidade do cliente.</param>
+        /// <returns>Valor total da fatura.</returns>
         private decimal CalculaValorFatura(DateTime dataInicial, DateTime dataCorte, List<Veiculo> veiculosDoCLiente, decimal? valorMensalidade)
         {
             decimal valorFatura = 0m;
@@ -141,6 +149,11 @@ namespace Parking.Api.Services
             }
         }
 
+        /// <summary>
+        /// Verifica se uma competência está no formato válido yyyy-MM.
+        /// </summary>
+        /// <param name="competencia">Competência a ser validada.</param>
+        /// <returns>true se válida, false caso contrário.</returns>
         public bool ECompetenciaValida(string competencia)
         {
             return DateTime.TryParseExact(

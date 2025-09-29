@@ -101,6 +101,9 @@ public class VeiculosService(AppDbContext db, PlacaService placaService, IClient
         }
     }
 
+    /// <summary>
+    /// Atualiza o cliente associado a um veículo, criando um novo registro.
+    /// </summary>
     private async Task<Veiculo> AtualizarCliente(Veiculo veiculo, VeiculoDto dto)
     {
         IDbContextTransaction transaction = await db.Database.BeginTransactionAsync();
@@ -121,6 +124,10 @@ public class VeiculosService(AppDbContext db, PlacaService placaService, IClient
         }
 
     }
+
+    /// <summary>
+    /// Atualiza os dados (exceto a placa) de um veículo existente.
+    /// </summary>
     private async Task<Veiculo> AtualizarDadosDoVeiculo(Veiculo veiculo, VeiculoDto dto)
     {
         var placa = placaService.Sanitizar(dto.Placa);
