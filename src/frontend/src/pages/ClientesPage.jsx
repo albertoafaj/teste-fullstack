@@ -1,83 +1,190 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiGet, apiPost, apiDelete } from '../api'
+import { apiGet, apiPut, apiPost, apiDelete } from '../api'
 
-export default function ClientesPage(){
-  const qc = useQueryClient()
-  const [filtro, setFiltro] = useState('')
-  const [mensalista, setMensalista] = useState('all')
-  const [form, setForm] = useState({ nome:'', telefone:'', endereco:'', mensalista:false, valorMensalidade:'' })
+export default function ClientesPage() {
+    const qc = useQueryClient()
+    const [filtro, setFiltro] = useState('')
+    const [mensalista, setMensalista] = useState('all')
+    const [form, setForm] = useState({ nome: '', telefone: '', endereco: '', mensalista: false, valorMensalidade: '' })
+    const [editId, setEditId] = useState(null)
+    const [errorMessage, setErrorMessage] = useState('')
+    const [errorMessageDelete, setErrorMessageDelete] = useState('')
 
-  const q = useQuery({
-    queryKey:['clientes', filtro, mensalista],
-    queryFn:() => apiGet(`/api/clientes?pagina=1&tamanho=20&filtro=${encodeURIComponent(filtro)}&mensalista=${mensalista}`)
-  })
+    const q = useQuery({
+        queryKey: ['clientes', filtro, mensalista],
+        queryFn: () => apiGet(`/api/clientes?pagina=1&tamanho=20&filtro=${encodeURIComponent(filtro)}&mensalista=${mensalista}`)
+    })
 
-  const create = useMutation({
-    mutationFn: (data) => apiPost('/api/clientes', data),
-    onSuccess: () => qc.invalidateQueries({ queryKey:['clientes'] })
-  })
+    const create = useMutation({
+        mutationFn: (data) => apiPost('/api/clientes', data),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['clientes'] })
+            setErrorMessage('')
+            resetForm()
+        },
+        onError: (error) => {
+            setErrorMessage(error.message)
+        }
+    })
 
-  const remover = useMutation({
-    mutationFn: (id) => apiDelete(`/api/clientes/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey:['clientes'] })
-  })
+    const remover = useMutation({
+        mutationFn: (id) => apiDelete(`/api/clientes/${id}`),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['clientes'] })
+            setErrorMessageDelete('')
+            resetForm()
+        },
+        onError: (error) => {
+            setErrorMessageDelete(error.message)
+        }
+    })
 
-  return (
-    <div>
-      <h2>Clientes</h2>
+    const update = useMutation({
+        mutationFn: (data) => apiPut(`/api/clientes/${editId}`, data),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['clientes'] })
+            setErrorMessage('')
+            resetForm()
+        },
+        onError: (error) => {
+            setErrorMessage(error.message)
+        }
+    })
 
-      <div className="section">
-        <div className="grid grid-3">
-          <input placeholder="Buscar por nome" value={filtro} onChange={e=>setFiltro(e.target.value)} />
-          <select value={mensalista} onChange={e=>setMensalista(e.target.value)}>
-            <option value="all">Todos</option>
-            <option value="true">Mensalistas</option>
-            <option value="false">Não mensalistas</option>
-          </select>
-          <div/>
+    function resetForm() {
+        setForm({ nome: '', telefone: '', endereco: '', mensalista: false, valorMensalidade: '' })
+        setEditId(null)
+    }
+
+    useEffect(() => {
+        if (errorMessage || errorMessageDelete) {
+            setErrorMessage('')
+            setErrorMessageDelete('')
+        }
+    }, [form, filtro, mensalista])
+
+    function handleSubmit() {
+        const payload = {
+            nome: form.nome,
+            telefone: form.telefone,
+            endereco: form.endereco,
+            mensalista: form.mensalista,
+            valorMensalidade: form.valorMensalidade ? Number(form.valorMensalidade) : null
+        }
+
+        const acao = editId ? 'atualizar' : 'adicionar'
+
+        if (window.confirm(`Tem certeza que deseja ${acao} este cliente?`)) {
+            if (editId) {
+                update.mutate(payload)
+            } else {
+                create.mutate(payload)
+            }
+        }
+    }
+
+    function handleDelete(id, nome) {
+        if (window.confirm(`Tem certeza que deseja excluir o cliente ${nome}?`)) {
+            remover.mutate(id)
+        }
+    }
+
+    return (
+        <div>
+            <h2>Clientes</h2>
+
+            <div className="section">
+                <div className="grid grid-3">
+                    <input placeholder="Buscar por nome" value={filtro} onChange={e => setFiltro(e.target.value)} />
+                    <select value={mensalista} onChange={e => setMensalista(e.target.value)}>
+                        <option value="all">Todos</option>
+                        <option value="true">Mensalistas</option>
+                        <option value="false">Não mensalistas</option>
+                    </select>
+                    <div />
+                </div>
+            </div>
+
+            <h3>{editId ? 'Editar cliente' : 'Novo cliente'}</h3>
+            <div className="section">
+                <div className="grid grid-4">
+                    <div>
+                        {editId ? <label htmlFor="Nome">Nome</label> : null}
+                        <input placeholder="Nome" value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} />
+                    </div>
+                    <div>
+                        {editId ? <label htmlFor="Telefone">Telefone</label> : null}
+                        <input placeholder="Telefone" value={form.telefone} onChange={e => setForm({ ...form, telefone: e.target.value })} />
+                    </div>
+                    <div>
+                        {editId ? <label htmlFor="Endereço">Endereço</label> : null}
+                        <input placeholder="Endereço" value={form.endereco} onChange={e => setForm({ ...form, endereco: e.target.value })} />
+                    </div>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input type="checkbox" checked={form.mensalista} onChange={e => setForm({ ...form, mensalista: e.target.checked })} /> Mensalista
+                    </label>
+                    <div>
+                        {editId ? <label htmlFor="Valor mensalidade">Valor mensalidade</label> : null}
+                        <input placeholder="Valor mensalidade" value={form.valorMensalidade} onChange={e => setForm({ ...form, valorMensalidade: e.target.value })} />
+                    </div>
+
+                    <div />
+                    <div />
+                    <div>
+
+                        <button onClick={handleSubmit}>{editId ? 'Atualizar' : 'Salvar'}</button>
+                        {editId && <button onClick={resetForm} className="btn-ghost">Cancelar</button>}
+                    </div>
+                </div>
+                {errorMessage && (
+                    <div style={{ color: 'red', marginBottom: 8 }}>
+                        {errorMessage}
+                    </div>
+                )}
+            </div>
+
+            <h3 style={{ marginTop: 16 }}>Lista</h3>
+            <div className="section">
+                {q.isLoading ? <p>Carregando...</p> : (
+                    <table>
+                        <thead><tr><th>Nome</th><th>Telefone</th><th>Mensalista</th><th></th><th></th></tr></thead>
+                        <tbody>
+                            {q.data.itens.map(c => (
+                                <tr key={c.id}>
+                                    <td>{c.nome}</td>
+                                    <td>{c.telefone}</td>
+                                    <td>{c.mensalista ? 'Sim' : 'Não'}</td>
+                                    <td>
+                                        <button className="btn-ghost" onClick={() => handleDelete(c.id, c.nome)}>Excluir</button>
+                                    </td>
+
+                                    <td>
+                                        <button className="btn-ghost" onClick={() => {
+                                            setForm({
+                                                nome: c.nome,
+                                                telefone: c.telefone,
+                                                endereco: c.endereco,
+                                                mensalista: c.mensalista,
+                                                valorMensalidade: c.valorMensalidade || ''
+                                            })
+                                            setEditId(c.id)
+                                            setErrorMessage('')
+                                        }}>Editar</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                )}
+                {errorMessageDelete && (
+                    <div style={{ color: 'red', marginBottom: 8 }}>
+                        {errorMessageDelete}
+                    </div>
+                )}
+            </div>
         </div>
-      </div>
-
-      <h3>Novo cliente</h3>
-      <div className="section">
-        <div className="grid grid-4">
-          <input placeholder="Nome" value={form.nome} onChange={e=>setForm({...form, nome:e.target.value})}/>
-          <input placeholder="Telefone" value={form.telefone} onChange={e=>setForm({...form, telefone:e.target.value})}/>
-          <input placeholder="Endereço" value={form.endereco} onChange={e=>setForm({...form, endereco:e.target.value})}/>
-          <label style={{display:'flex', alignItems:'center', gap:8}}>
-            <input type="checkbox" checked={form.mensalista} onChange={e=>setForm({...form, mensalista:e.target.checked})}/> Mensalista
-          </label>
-          <input placeholder="Valor mensalidade" value={form.valorMensalidade} onChange={e=>setForm({...form, valorMensalidade:e.target.value})}/>
-          <div/>
-          <div/>
-          <button onClick={()=>create.mutate({
-            nome:form.nome, telefone:form.telefone, endereco:form.endereco,
-            mensalista:form.mensalista, valorMensalidade:form.valorMensalidade? Number(form.valorMensalidade): null
-          })}>Salvar</button>
-        </div>
-      </div>
-
-      <h3 style={{marginTop:16}}>Lista</h3>
-      <div className="section">
-        {q.isLoading? <p>Carregando...</p> : (
-          <table>
-            <thead><tr><th>Nome</th><th>Telefone</th><th>Mensalista</th><th></th></tr></thead>
-            <tbody>
-              {q.data.itens.map(c=>(
-                <tr key={c.id}>
-                  <td>{c.nome}</td>
-                  <td>{c.telefone}</td>
-                  <td>{c.mensalista? 'Sim':'Não'}</td>
-                  <td>
-                    <button className="btn-ghost" onClick={()=>remover.mutate(c.id)}>Excluir</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
-  )
+    )
 }
