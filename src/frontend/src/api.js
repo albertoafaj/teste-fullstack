@@ -35,7 +35,7 @@ export async function apiDelete(path) {
     try {
         const r = await fetch(API + path, { method: 'DELETE' })
         if (!r.ok) return handleErrorResponse(r)
-        return r.json()
+        return r.text()
     } catch (err) {
         throw new Error(`Falha de conexão com a API. Detalhes: ${err.message}`)
     }
